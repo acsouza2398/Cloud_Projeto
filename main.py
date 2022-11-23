@@ -191,19 +191,32 @@ def criar(r):
         elif c == "4":
             print("\nUsuario \n")
             usrname = input("Digite o nome do usuário (sem espaços): ")
-            print("Criando usuário...")
+            while(1):
+                res_usr = input("\nDigite 1 para dar acesso completo ao usuário. \nDigite 2 para dar acesso apenas de leitura ao usuário.\n")
+                if res_usr == "1" :
+                    break
+                elif res_usr == "2":
+                    break
+                else:
+                    print("\nOpção inválida. Tente novamente.\n")
+            print(" \nCriando usuário...")
             print("Aguarde...")
 
             with open(usrname + "_usr.tf", "w") as f:
                 f.write('resource "aws_iam_user" "' + usrname + '"{ \n 	name = "' + usrname + '" \n tags = { \n    name = "' + usrname + '" \n  } \n } \n')
                 f.write('resource "aws_iam_user_login_profile" "' + usrname + '_login_profile" { \n 	user = "${aws_iam_user.' + usrname + '.name}" \n 	password_reset_required = true \n 	password_length = 10 \n } \n')
                 f.write('resource "aws_iam_access_key" "' + usrname + '_access_key" { \n	user = "${aws_iam_user.' + usrname + '.name}" \n} \n')
+                if res_usr == "1":
+                    f.write('resource "aws_iam_user_policy_attachment" "attach" { \n  user       = "${aws_iam_user.' + usrname + '.name}" \n  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess" \n} \n')
+                else:
+                    f.write('resource "aws_iam_user_policy_attachment" "attach" { \n  user       = "${aws_iam_user.' + usrname + '.name}" \n  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess" \n} \n')
+                f.write('output "' + usrname + '" { \n     value = { user = "${aws_iam_user.' + usrname + '.name}" \n password = "${aws_iam_user_login_profile.' + usrname + '_login_profile.password}" \n} \n }  \n')
                 f.close()
             subprocess.call(["terraform", "apply", "-auto-approve"], stdout=subprocess.DEVNULL)
             print("\nUsuário criado com sucesso. \n")
-            print("As credenciais do usuário são: \n")
+            print("As credenciais do usuário são:")
             subprocess.call(["terraform", "output", "-json", usrname])
-            print("Anote a senha. Ela não será mostrada novamente. \n")
+            print(" \nAnote a senha. Ela não será mostrada novamente. \n")
         elif c == "5":
             print("\nVoltar \n")
             break
@@ -291,7 +304,7 @@ def deletar(r):
             all_usr = []
             for i in range(len(output)):
                 if "aws_iam_user" in output[i]:
-                    if "aws_iam_user_login_profile" not in output[i]:
+                    if "aws_iam_user_login_profile" not in output[i] or "aws_iam_user_policy_attachment" not in output[i]:
                         all_usr.append(output[i])
             while(1):
                 print("\nEscolha um usuário para deletar: \n")
@@ -336,7 +349,7 @@ def listar(r):
             output,error = subprocess.Popen(["terraform", "state", "list"],stdout = subprocess.PIPE, stderr= subprocess.PIPE).communicate()
             output = output.decode("utf-8").split()
             for i in range(len(output)):
-                if "aws_iam_user_login_profile" not in output[i]:
+                if "aws_iam_user_login_profile" not in output[i] or "aws_iam_user_policy" not in output[i] or "aws_iam_user_policy_attachment" not in output[i]:
                     print(str(i) + " - " + output[i])
             if len(output) == 0:
                 print("\nNão há nada para listar.\n")
@@ -355,7 +368,7 @@ while(1):
     escolha = input("\nDigite 1 para criar algo. \nDigite 2 para deletar algo. \nDigite 3 para listar o que ja foi criado. \nDigite 4 para fechar o programa. \n")
 
     if escolha == "1":
-        print("\nCriar \n")
+        print("\nCriar")
         while(1):
             r = input('\nDigite 1 para região "us-east-1". \nDigite 2 para região "us-west-1". \n')
             if r == "1":
@@ -368,7 +381,7 @@ while(1):
                 print("\nComando inválido. \n")
         os.chdir("..")
     elif escolha == "2":
-        print("\nDeletar \n")
+        print("\nDeletar")
         while(1):
             r = input('\nDigite 1 para região "us-east-1". \nDigite 2 para região "us-west-1". \n')
             if r == "1":
@@ -381,7 +394,7 @@ while(1):
                 print("\nComando inválido. \n")
         os.chdir("..")
     elif escolha == "3":
-        print("\nListar \n")
+        print("\nListar")
         while(1):
             r = input('\nDigite 1 para região "us-east-1". \nDigite 2 para região "us-west-1". \n')
             if r == "1":
